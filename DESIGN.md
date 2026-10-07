@@ -35,7 +35,7 @@ Hofstadter's pq-system: axiom schema `x p - q x -` (x a run of hyphens) and one 
 
 - Two doors: `--p---q-----` (2+3=5, buildable) and `--p--q-----` (2+2=5, never buildable). Plates: **x+** picks x (1 to 5), **AX** writes the axiom, **R** applies the rule, **∅** clears. Solution: x=2, AX, R, R.
 - Unlike the MU room this one is solvable from inside. The lens (J) translates the strings into arithmetic, which tells you which door is even possible. It is the MU lesson mirrored: there the interpretation (counting I's) showed what was impossible; here it shows what is meaningful.
-- Reach it from the room buttons at the top, by clearing room 1, or directly at `#pq` (e.g. `https://mindprints.github.io/GEB/#pq`; room 3 is `#bach`).
+- Reach it from the room buttons at the top, by clearing room 1, or directly at `#pq` (e.g. `https://mindprints.github.io/GEB/#pq`; room 3 is `#bach`, room 4 is `#escher`).
 - Rooms are data (`ROOMS` in `index.html`: map builder, plate meanings, HUD, signs, hints, intro, win text), so more rooms are cheap to add.
 
 ## Room 3: the Bach recorder / fugue hall (implemented, first pass)
@@ -43,6 +43,13 @@ Hofstadter's pq-system: axiom schema `x p - q x -` (x a run of hyphens) and one 
 - A door sings a nine-note tune (`C F D D F C G D F`). The player can only keep a **subject** of at most three notes (plates C to G), but can **answer** it: **ANS** appends a copy, **RET** appends it backwards (cancrizans), **INV** appends it upside down (inversion, pitch p becomes 4-p). **▶** plays the phrase, **∅** clears. Solution: subject C F D, then ANS, RET, INV.
 - The Isomorphism Lens (J) draws the door's tune and the player's phrase as a piano roll, cuts the tune into threes, and states which phrase is the retrograde and which is the inversion. Same lesson as rooms 1 and 2: a structure invisible in the flat sequence appears when you step outside and look at the whole.
 - Not a literal record-and-replay of movement yet (the "temporal clones" of the original proposal). That needs ghost avatars and timed platforms and would be the next step if this room proves fun.
+
+## Room 4: the Gravity Hall (implemented, first pass)
+
+- Escher's impossible architecture, done within the same raycaster without real 3D: the hall exists **twice** (a floor world and a ceiling world) with the same footprint but different walls. **⇅** plates flip gravity: the view turns upside down with a card-flip animation and the player is swapped into the other world at the same spot. Plates are open ground in both worlds, so you can always step off them. Reach the EXIT plate to open the gate.
+- The two layouts were found by a seeded search (`seed 6`) for a maze needing at least 3 flips with a 20-step shortest route and no route without flips, and the solution is replayed through the live engine in testing.
+- The lens (J) draws both plans side by side with plates, exit and your position. Same lesson again: each world is a dead end from inside, but the two plans together have a way through.
+- Not true non-Euclidean geometry (no portals, no genuine wall-relative gravity). That would need a real 3D engine.
 
 ## Alternatives worth considering
 

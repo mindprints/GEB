@@ -43,9 +43,9 @@
   <canvas id="c" width="640" height="400"></canvas>
   <div class="hud" id="hud">
     <div><b>LAYER 0</b> &nbsp;<span id="roomname">The Cathedral Corridor</span></div>
-    <div>string: <span id="str" class="mono">MI</span> &nbsp;→&nbsp; <span id="tgt"></span></div>
+    <div><span id="strlabel">string: <span id="str" class="mono">MI</span> &nbsp;→&nbsp; </span><span id="tgt"></span></div>
   </div>
-  <div id="rooms"><button id="r-miu">Room 1 · MIU</button><button id="r-pq">Room 2 · pq</button><button id="r-bach">Room 3 · Bach</button></div>
+  <div id="rooms"><button id="r-miu">Room 1 · MIU</button><button id="r-pq">Room 2 · pq</button><button id="r-bach">Room 3 · Bach</button><button id="r-escher">Room 4 · Escher</button></div>
   <div id="log"></div>
   <div id="say"></div>
   <div id="help">WASD / arrows: move &amp; turn · Q/E strafe · step on a plate to apply its rule<br><b>J</b>: Jump Out of the System · R: reset string</div>
@@ -79,6 +79,12 @@
         <canvas id="roll" width="300" height="110" style="width:100%;max-width:340px;background:#f3ecd8;border:1px solid #14110f;margin:6px 0"></canvas>
         <div id="bachlens" class="mono" aria-live="polite"></div>
         <div><button id="hearT">▶ hear the door</button><button id="hearMine">▶ hear mine</button></div>
+      </div>
+      <div id="escherPanel" style="display:none">
+        <h2>The Tortoise's Desk</h2>
+        <div>Inside, you only ever see one world at a time. Here are both plans on one page. <b>⇅</b> flips gravity, <b>E</b> is the exit, the dot is you; the bright frame is the world you are in.</div>
+        <canvas id="plan" width="300" height="236" style="width:100%;max-width:340px;background:#f3ecd8;border:1px solid #14110f;margin:6px 0" role="img" aria-label="Plans of the floor world and the ceiling world"></canvas>
+        <div id="escherlens" class="mono" aria-live="polite"></div>
       </div>
       <div style="margin-top:10px"><button id="dive"><b>Dive back in →</b></button></div>
     </div>
@@ -160,6 +166,19 @@ function bachAct(p) {
   S.moves++; S.str = bachNames(S.ph); refreshHud(); hint();
   if (bachEq(S.ph, BACH_T)) win();
 }
+// Escher: two stacked worlds with identical footprints. A gravity plate flips which world you stand in (and which way is up).
+const ESCHER = { G: [[1, 12], [3, 9], [5, 14], [6, 12]], exit: [4, 2], start: [4, 14],
+  L: [["#########", "#########", "##...#..#", "##...##.#", "#..#...##", "#..##..##", "#.....#.#", "###.#..##", "##..##..#", "#....##.#", "###....##", "#.###...#", "#.#.....#", "#...#...#", "##......#", "#########"],
+      ["#########", "#########", "##......#", "#....##.#", "##.#.#..#", "#...###.#", "##..#...#", "#...#..##", "###..#.##", "#.#...###", "#......##", "#...##..#", "#...##.##", "#.###..##", "#.......#", "#########"]] };
+function escherFlip() { if (S.flip) return; S.flip = { t: 0, swapped: false }; tone(110, 0, .55, 'sine', .12); tone(165, .15, .5, 'sine', .08); }
+function tickFlip(dt) {
+  const F = S.flip; F.t = Math.min(1, F.t + dt / .7);
+  if (!F.swapped && F.t >= .5) { F.swapped = true; S.g ^= 1; map = room.layers[S.g]; refreshHud(); }
+  if (F.t >= 1) S.flip = null;
+}
+function escherAct(p) {
+  if (p === 1) { S.moves++; escherFlip(); hint(); } else if (p === 2) win();
+}
 const ROOMS = {
   miu: { id: 'miu', name: 'The Cathedral Corridor', winGate: 2, start: [3.5, 21.5], next: 'pq',
     build() {
@@ -207,7 +226,7 @@ const ROOMS = {
     welcome: ['Tortoise', 'Hyphens, a <span class="mono">p</span> and a <span class="mono">q</span>. Meaningless marks, Achilles, until someone decides what they mean.'],
     winText: () => `You built <span class="mono">${PQ_TRUE}</span> by pushing symbols alone, and it turned out to say <b>2 + 3 = 5</b>. The other door, <span class="mono">${PQ_FALSE}</span> (2 + 2 = 5), could never be built: the rules only ever make true sentences. This is an <b>isomorphism</b>: a meaning-blind game of symbols that mirrors arithmetic. Room 1 was the same trick in reverse; there the lens told you what could <i>not</i> happen.`,
   },
-  bach: { id: 'bach', name: 'The Fugue Hall', winGate: 2, start: [4.5, 20.5], next: null,
+  bach: { id: 'bach', name: 'The Fugue Hall', winGate: 2, start: [4.5, 20.5], next: 'escher',
     build() {
       blankMap(11, 22);
       for (let x = 1; x <= 9; x++) map[1][x] = 2;                              // the door
@@ -232,10 +251,38 @@ const ROOMS = {
     welcome: ['Tortoise', 'Nine notes on the door, Achilles, and a hall that lets you repeat yourself in three ways. Bach would approve.'],
     winText: () => `The door sang <span class="mono">${bachNames(BACH_T)}</span> and you built it from a three-note subject: <b>${bachNames(BACH_T.slice(0, 3))}</b>, then the same notes <b>backwards</b> (cancrizans, the crab canon's trick), then <b>turned upside down</b> (inversion). Three rooms, one idea: a structure hidden inside a pattern becomes visible when you step outside it and look at the pattern as a whole.`,
   },
+  escher: { id: 'escher', name: 'The Gravity Hall', winGate: 2, start: [4.5, 14.5], next: null, layers: null,
+    build() {
+      blankMap(9, 16);
+      const mk = rows => rows.map(r => [...r].map(c => c === '#' ? 1 : 0));
+      this.layers = ESCHER.L.map(mk);
+      this.layers.forEach(m => { for (let x = 1; x <= 7; x++) m[1][x] = 2; });   // the gate, in both worlds
+      map = this.layers[0];
+      ESCHER.G.forEach(([x, y]) => plate[y][x] = 1);
+      plate[ESCHER.exit[1]][ESCHER.exit[0]] = 2;
+      PD = { 1: { name: '⇅', label: 'gravity flips' }, 2: { name: 'EXIT', label: 'the way out' } };
+    },
+    onDive() { S.g = 0; S.flip = null; map = this.layers[0]; },
+    reset() {
+      S.str = ''; S.hist = []; S.moves = 0; S.g = 0; S.flip = null;
+      if (this.layers) { map = this.layers[0]; S.px = this.start[0]; S.py = this.start[1]; S.lastCell = `${Math.floor(S.px)},${Math.floor(S.py)}`; }   // back to the floor world, so back to the start too
+    },
+    hud: () => `gravity: ${S.g ? '↑ the ceiling world' : '↓ the floor world'} &nbsp;·&nbsp; reach the <span class="mono">EXIT</span> plate`,
+    signs: () => [{ x: 4.5, y: 1.6, z: .78, text: S.won ? 'OPEN' : 'EXIT', size: .3, color: S.won ? '#ffe9a0' : '#f6e7b8' }],
+    act: p => escherAct(p),
+    hints: [[2, 'Achilles', 'Tortoise, I stepped on that plate and the whole hall turned over! The walls are not where I left them.'],
+            [5, 'Tortoise', 'Two halls share one floor plan, Achilles; each plate decides which one you are standing in. Press <b>J</b> and look at both plans at once.']],
+    intro: `<h2 style="color:var(--gold);margin-top:0">Room 4 · The Gravity Hall</h2>
+      <p>The exit plate is at the far end, but the way is blocked. This hall exists <b>twice</b>: a floor world and a ceiling world, with the same footprint but different walls.</p>
+      <p>The <b>⇅</b> plates flip gravity, which swaps you into the other world at the same spot. A wall in one world can be open ground in the other.</p>
+      <p>Reach the <b>EXIT</b> plate. Press <b>J</b> to step out and see both worlds drawn as plans.</p>`,
+    welcome: ['Tortoise', 'An impossible building, Achilles: one staircase, two destinations. Mind which way is up.'],
+    winText: () => `You crossed a building that cannot exist by treating its two worlds as two maps and hopping between them. From inside, each world was a maze with no way out. From above, the two plans together had one. That is the same move as the other rooms: the trick that solves the problem lives one level up.`,
+  },
 };
 
 const S = {
-  layer: 0, axiom: 'MI', str: 'MI', hist: ['MI'], moves: 0, won: false, proved: false, trans: null, frozen: null, x: 1, rec: [], ph: [],
+  layer: 0, axiom: 'MI', str: 'MI', hist: ['MI'], moves: 0, won: false, proved: false, trans: null, frozen: null, x: 1, rec: [], ph: [], g: 0, flip: null,
   px: 3.5, py: 21.5, a: -Math.PI / 2, lastCell: '3,21', keys: {},
 };
 
@@ -259,7 +306,7 @@ function say(who, text, ms = 6000) { sayEl.innerHTML = `<b>${who}:</b> ${text}`;
 
 // ---------------------------------------------------------------- game logic
 const strEl = document.getElementById('str'), logEl = document.getElementById('log');
-function refreshHud() { strEl.textContent = S.str || '∅'; document.getElementById('tgt').innerHTML = room.hud();
+function refreshHud() { strEl.textContent = S.str || '∅'; document.getElementById('strlabel').style.display = room.id === 'escher' ? 'none' : ''; document.getElementById('tgt').innerHTML = room.hud();
   logEl.innerHTML = S.hist.slice(-6).map((s, i, a) => (i === a.length - 1 ? '▸ ' : '&nbsp;&nbsp;') + s).join('<br>'); }
 function applyRule(r) {
   const t = RULES[r].fn(S.str);
@@ -300,6 +347,8 @@ const img = ctx.createImageData(W, H), buf = img.data, zbuf = new Float32Array(W
 function render3D() {
   const dirX = Math.cos(S.a), dirY = Math.sin(S.a), plX = -dirY * 0.66, plY = dirX * 0.66;
   const fog = d => Math.max(0.12, 1 - d / 24);
+  const inv = room.id === 'escher' && S.g === 1;                              // ceiling world: everything upside down
+  const prow = y => inv ? H - 1 - y : y;
   // ceiling & floor (floor casting)
   for (let y = 0; y < H; y++) {
     const isFloor = y > H / 2, p = Math.abs(y - H / 2); if (p === 0) continue;
@@ -319,7 +368,7 @@ function render3D() {
         const hatch = ((Math.floor(fx * 6) + Math.floor(fy * 6)) & 1) ? 46 : 30;  // lithograph ceiling vaults
         r = hatch; g = hatch * .95; b = hatch * .85;
       }
-      const i = (y * W + x) * 4; buf[i] = r * f; buf[i + 1] = g * f; buf[i + 2] = b * f; buf[i + 3] = 255;
+      const i = (prow(y) * W + x) * 4; buf[i] = r * f; buf[i + 1] = g * f; buf[i + 2] = b * f; buf[i + 3] = 255;
     }
   }
   // walls (DDA)
@@ -351,17 +400,18 @@ function render3D() {
         if (bx < .05 || (v * 4) % 1 < .06) L *= .45;       // mortar
         if (((x + y) & 3) === 0) L *= .82;                 // engraving hatch
         r = L; g = L * .96; b = L * .84;
+        if (inv) { r *= .8; g *= .9; b *= 1.15; }                       // ceiling-world walls are colder
       }
-      const i = (y * W + x) * 4; buf[i] = r * f; buf[i + 1] = g * f; buf[i + 2] = b * f; buf[i + 3] = 255;
+      const i = (prow(y) * W + x) * 4; buf[i] = r * f; buf[i + 1] = g * f; buf[i + 2] = b * f; buf[i + 3] = 255;
     }
   }
   ctx.putImageData(img, 0, 0);
   // billboards: plate labels + gate sign
   const label = (wx, wy, z, text, size, color) => {
-    const dx = wx - S.px, dy = wy - S.py, inv = 1 / (plX * dirY - dirX * plY);
-    const tx = inv * (dirY * dx - dirX * dy), ty = inv * (-plY * dx + plX * dy);
+    const dx = wx - S.px, dy = wy - S.py, det = 1 / (plX * dirY - dirX * plY);
+    const tx = det * (dirY * dx - dirX * dy), ty = det * (-plY * dx + plX * dy);
     if (ty < .3) return;
-    const sx = (W / 2) * (1 + tx / ty), sy = H / 2 - (z - .5) * H / ty;
+    const sx = (W / 2) * (1 + tx / ty), sy0 = H / 2 - (z - .5) * H / ty, sy = inv ? H - sy0 : sy0;
     if (sx < 0 || sx >= W || zbuf[sx | 0] < ty) return;
     ctx.font = `bold ${Math.max(8, size * H / ty)}px ui-monospace, Menlo, monospace`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = 3; ctx.strokeStyle = '#000';
@@ -404,7 +454,7 @@ function jootsOut() { if (S.layer !== 0 || S.trans || S.won) return; startTrans(
 const helpEl = document.getElementById('help');
 function diveIn() {
   if (S.layer !== 1) return; pageEl.style.display = 'none'; if (room.id === 'miu') resetString();
-  S.px = room.start[0]; S.py = room.start[1]; S.a = -Math.PI / 2; S.lastCell = `${Math.floor(S.px)},${Math.floor(S.py)}`; refreshHud();
+  S.px = room.start[0]; S.py = room.start[1]; S.a = -Math.PI / 2; S.lastCell = `${Math.floor(S.px)},${Math.floor(S.py)}`; if (room.onDive) room.onDive(); refreshHud();
   render3D(); const f = document.createElement('canvas'); f.width = W; f.height = H; f.getContext('2d').drawImage(cv, 0, 0); S.frozen = f;   // fresh view of the (possibly rewritten) world
   S.layer = 1; startTrans(-1); document.getElementById('hud').style.opacity = 1; logEl.style.opacity = 1; helpEl.style.display = ''; if (room.id === 'miu') playString(S.axiom);
   if (room.id === 'miu') say('Tortoise', S.axiom === 'MI' ? 'Same axiom, same room. Do be careful about what you expect from it.' : `A fresh page, a fresh axiom: <span class="mono">${S.axiom}</span>. Reality is whatever the first line says it is.`, 6000);
@@ -452,7 +502,25 @@ function buildBachPage() {
 }
 document.getElementById('hearT').onclick = () => bachPlay(BACH_T);
 document.getElementById('hearMine').onclick = () => bachPlay(S.ph);
+function buildEscherPage() {
+  const c = document.getElementById('plan').getContext('2d'), cs = 14, ox = [4, 156], oy = 18;
+  c.clearRect(0, 0, 300, 236); c.font = '11px ui-monospace, Menlo, monospace'; c.textBaseline = 'middle'; c.textAlign = 'center';
+  ['the floor world', 'the ceiling world'].forEach((name, g) => {
+    c.fillStyle = '#14110f'; c.textAlign = 'left'; c.fillText(name, ox[g], 8);
+    const m = room.layers[g];
+    for (let y = 1; y < 15; y++) for (let x = 0; x < 9; x++) {
+      const px = ox[g] + x * cs, py = oy + (y - 1) * cs;
+      if (m[y][x] === 1 || (y === 1)) { c.fillStyle = y === 1 && x > 0 && x < 8 ? '#b58a2a' : '#14110f'; c.fillRect(px, py, cs, cs); }
+    }
+    c.textAlign = 'center';
+    ESCHER.G.forEach(([x, y]) => { c.fillStyle = '#c9a24a'; c.fillRect(ox[g] + x * cs + 1, oy + (y - 1) * cs + 1, cs - 2, cs - 2); c.fillStyle = '#14110f'; c.fillText('⇅', ox[g] + x * cs + cs / 2, oy + (y - 1) * cs + cs / 2 + 1); });
+    const [ex, ey] = ESCHER.exit; c.fillStyle = '#2a6b2a'; c.fillRect(ox[g] + ex * cs + 1, oy + (ey - 1) * cs + 1, cs - 2, cs - 2); c.fillStyle = '#fff'; c.fillText('E', ox[g] + ex * cs + cs / 2, oy + (ey - 1) * cs + cs / 2 + 1);
+    if (g === S.g) { c.strokeStyle = '#c9503a'; c.lineWidth = 2; c.strokeRect(ox[g] - 1, oy - 1, 9 * cs + 2, 14 * cs + 2); c.fillStyle = '#c9503a'; c.beginPath(); c.arc(ox[g] + S.px * cs, oy + (S.py - 1) * cs, 4, 0, 7); c.fill(); }
+  });
+  document.getElementById('escherlens').innerHTML = `You are in the <b>${S.g ? 'ceiling' : 'floor'}</b> world. Gold squares exist in both worlds, so you can always step off them. A wall in one plan is open ground in the other, so any blocked passage can be crossed by flipping at the right place.`;
+}
 function buildPageUI() {
+  if (room.id === 'escher') return buildEscherPage();
   if (room.id === 'bach') return buildBachPage();
   if (room.id === 'pq') return buildPqPage();
   document.getElementById('quillnote').innerHTML = S.proved
@@ -492,7 +560,7 @@ function closeIntro() { if (introEl.style.display !== 'none') { introEl.style.di
 introEl.addEventListener('click', closeIntro);
 function loadRoom(id, withIntro = true) {
   room = ROOMS[id]; room.build();
-  Object.assign(S, { layer: 0, trans: null, won: false, proved: false, axiom: 'MI', x: 1, a: -Math.PI / 2, px: room.start[0], py: room.start[1], keys: {} });
+  Object.assign(S, { layer: 0, trans: null, won: false, proved: false, axiom: 'MI', x: 1, g: 0, flip: null, a: -Math.PI / 2, px: room.start[0], py: room.start[1], keys: {} });
   S.lastCell = `${Math.floor(S.px)},${Math.floor(S.py)}`;
   room.reset();
   pageEl.style.display = 'none'; document.getElementById('win').style.display = 'none';
@@ -501,6 +569,7 @@ function loadRoom(id, withIntro = true) {
   document.getElementById('miuPanel').style.display = id === 'miu' ? '' : 'none';
   document.getElementById('pqPanel').style.display = id === 'pq' ? '' : 'none';
   document.getElementById('bachPanel').style.display = id === 'bach' ? '' : 'none';
+  document.getElementById('escherPanel').style.display = id === 'escher' ? '' : 'none';
   for (const r of Object.keys(ROOMS)) document.getElementById('r-' + r).className = r === id ? 'on' : '';
   proofEl.innerHTML = ''; lensEl.innerHTML = '';
   refreshHud();
@@ -529,11 +598,17 @@ function walk(dt) {
   const c = `${Math.floor(S.px)},${Math.floor(S.py)}`;
   if (c !== S.lastCell) { S.lastCell = c; const p = plate[Math.floor(S.py)][Math.floor(S.px)]; if (p && !S.won) room.act(p); }
 }
+const tmpC = document.createElement('canvas'); tmpC.width = W; tmpC.height = H;
+function squash() {                                                          // card-flip effect while gravity turns over
+  tmpC.getContext('2d').drawImage(cv, 0, 0);
+  const sc = Math.max(.02, Math.abs(Math.cos(Math.PI * S.flip.t)));
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H); ctx.save(); ctx.translate(0, H / 2); ctx.scale(1, sc); ctx.drawImage(tmpC, 0, -H / 2); ctx.restore();
+}
 let last = performance.now();
 function frame(now) {
   const dt = Math.min(.05, (now - last) / 1000); last = now;
   if (S.trans) renderTrans(dt);
-  else if (S.layer === 0) { walk(dt); render3D(); }
+  else if (S.layer === 0) { if (S.flip) tickFlip(dt); else walk(dt); render3D(); if (S.flip) squash(); }
   else drawPage();
   requestAnimationFrame(frame);
 }
