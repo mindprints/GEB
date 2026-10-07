@@ -24,14 +24,14 @@ Gemini's prototype resolves the dead end by letting the player edit the axiom to
 - **Layer 0**: first-person raycaster corridor. Four plates apply the four MIU rules; the string is also a melody (M, I, U map to notes). The gate wants `MU`.
 - **Dialogue**: Achilles and the Tortoise hint after N failed moves.
 - **JOOTS**: the FPV frame shrinks into a picture on a page (Layer 1).
-- **Layer 1**: the **Isomorphism Lens** actually computes the system: it enumerates every derivable string (about 1,590 at depth 7) and shows the `#I mod 3` census, so the player *sees* that no string has remainder 0. Only then is the axiom editor meaningful: `MIII` makes MU reachable.
+- **Layer 1** (proof-gated, alternative 1 below): the Isomorphism Lens measures every derivable string (about 1,590 at depth 7) without naming the law. The player then submits a claimed invariant. The game checks it against the axiom, every rule applied to all strings of the form `M[IU]*` up to length 9, and MU, and returns a concrete counterexample if it fails. Only an accepted proof unlocks the quill (axiom editor), so editing the axiom is a consequence of understanding, not a shortcut.
 - Verified headlessly: rule application, the enumeration (MU absent from `MI`, present from `MIII`), the layer transitions, and no console errors.
 
-Known prototype limits: rules III/IV act on the leftmost match only in the FPV; the Layer 1 axiom editor is still the "cheat" described above, softened by the lens requirement.
+Known prototype limits: rules III/IV act on the leftmost match only in the FPV; the proof checker is exhaustive only up to length 9 (enough for these claims, not a general theorem prover); the claim list is a fixed menu rather than free-form.
 
 ## Alternatives worth considering
 
-1. **Invariant-gated JOOTS (recommended).** Jumping out is only available once the player has *submitted a proof*: pick the invariant from a set of candidate lenses (`#I`, `#U`, `length`, `#I mod 3`) and the game verifies it against all derivable strings. Wrong lens: the system shows a counterexample. Right lens: the layer opens. This keeps the core insight and is cheap to verify by brute force.
+1. **Invariant-gated JOOTS (implemented).** Jumping out (J) is always available, but the quill that rewrites the axiom only unlocks once the player has *submitted a proof*: pick a claimed invariant from a fixed menu (`#I` odd, `#I` never a multiple of 3, `#U` even, ...). The game checks it against the axiom, MU, and every rule applied to all `M[IU]*` strings up to length 9. Wrong claim: a concrete counterexample. Right claim: the quill unlocks. This keeps the core insight and is cheap to verify by brute force.
 2. **Solvable-from-inside variant.** Use the book's other systems (the pq-system, the Tortoise's "Typographical Number Theory" fragments). A pq-system puzzle is *solvable* and teaches isomorphism: `-p--q---` is "2+1=3". Pair a solvable system with an unsolvable one so the player learns when to stop.
 3. **Layer as object, not camera.** Each layer is a physical toy in the layer above (a diorama on a desk). JOOTS becomes picking the room up. Rendering stays simple: one extra camera and a render texture.
 4. **Bach slice first.** The most gameplay per engineering hour: a recorder that plays your moves as reversed / inverted / augmented voices, with platforms driven by a fugue subject. Closest to a shippable core loop.
