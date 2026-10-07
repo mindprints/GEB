@@ -289,7 +289,7 @@ function render3D() {
     const f = fog(dist) * (side ? .72 : 1);
     for (let y = y0; y <= y1; y++) {
       const v = (y - (H - lh) / 2) / lh; let r, g, b;
-      if (hit === 2) {                                    // the gate: golden bars, bright when open
+      if (hit === 2 || hit === 3) {                                    // the gate: golden bars, bright when open
         const bar = (Math.floor(wx * 10) & 1), open = S.won && hit === room.winGate;
         const L = open ? 255 : (bar ? 150 : 70); r = L; g = L * .82; b = L * (open ? .7 : .3);
       } else {
