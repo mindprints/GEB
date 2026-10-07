@@ -35,15 +35,21 @@ Hofstadter's pq-system: axiom schema `x p - q x -` (x a run of hyphens) and one 
 
 - Two doors: `--p---q-----` (2+3=5, buildable) and `--p--q-----` (2+2=5, never buildable). Plates: **x+** picks x (1 to 5), **AX** writes the axiom, **R** applies the rule, **∅** clears. Solution: x=2, AX, R, R.
 - Unlike the MU room this one is solvable from inside. The lens (J) translates the strings into arithmetic, which tells you which door is even possible. It is the MU lesson mirrored: there the interpretation (counting I's) showed what was impossible; here it shows what is meaningful.
-- Reach it from the room buttons at the top, by clearing room 1, or directly at `#pq` (e.g. `https://mindprints.github.io/GEB/#pq`).
+- Reach it from the room buttons at the top, by clearing room 1, or directly at `#pq` (e.g. `https://mindprints.github.io/GEB/#pq`; room 3 is `#bach`).
 - Rooms are data (`ROOMS` in `index.html`: map builder, plate meanings, HUD, signs, hints, intro, win text), so more rooms are cheap to add.
+
+## Room 3: the Bach recorder / fugue hall (implemented, first pass)
+
+- A door sings a nine-note tune (`C F D D F C G D F`). The player can only keep a **subject** of at most three notes (plates C to G), but can **answer** it: **ANS** appends a copy, **RET** appends it backwards (cancrizans), **INV** appends it upside down (inversion, pitch p becomes 4-p). **▶** plays the phrase, **∅** clears. Solution: subject C F D, then ANS, RET, INV.
+- The Isomorphism Lens (J) draws the door's tune and the player's phrase as a piano roll, cuts the tune into threes, and states which phrase is the retrograde and which is the inversion. Same lesson as rooms 1 and 2: a structure invisible in the flat sequence appears when you step outside and look at the whole.
+- Not a literal record-and-replay of movement yet (the "temporal clones" of the original proposal). That needs ghost avatars and timed platforms and would be the next step if this room proves fun.
 
 ## Alternatives worth considering
 
 1. **Invariant-gated JOOTS (implemented).** Jumping out (J) is always available, but the quill that rewrites the axiom only unlocks once the player has *submitted a proof*: pick a claimed invariant from a fixed menu (`#I` odd, `#I` never a multiple of 3, `#U` even, ...). The game checks it against the axiom, MU, and every rule applied to all `M[IU]*` strings up to length 9. Wrong claim: a concrete counterexample. Right claim: the quill unlocks. This keeps the core insight and is cheap to verify by brute force.
 2. **Solvable-from-inside variant (implemented as room 2).** Use the book's other systems (the pq-system, the Tortoise's "Typographical Number Theory" fragments). A pq-system puzzle is *solvable* and teaches isomorphism: `-p--q---` is "2+1=3". Pair a solvable system with an unsolvable one so the player learns when to stop.
 3. **Layer as object, not camera.** Each layer is a physical toy in the layer above (a diorama on a desk). JOOTS becomes picking the room up. Rendering stays simple: one extra camera and a render texture.
-4. **Bach slice first.** The most gameplay per engineering hour: a recorder that plays your moves as reversed / inverted / augmented voices, with platforms driven by a fugue subject. Closest to a shippable core loop.
+4. **Bach slice first (first pass implemented as room 3).** The most gameplay per engineering hour: a recorder that plays your moves as reversed / inverted / augmented voices, with platforms driven by a fugue subject. Closest to a shippable core loop.
 5. **Dialogue-driven structure.** Make each Achilles/Tortoise dialogue a level whose structure mirrors the dialogue (the "Crab Canon" is literally a palindrome corridor you walk forward and back).
 
 ## Suggested path
