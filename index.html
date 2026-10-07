@@ -263,7 +263,10 @@ const ROOMS = {
       PD = { 1: { name: '⇅', label: 'gravity flips' }, 2: { name: 'EXIT', label: 'the way out' } };
     },
     onDive() { S.g = 0; S.flip = null; map = this.layers[0]; },
-    reset() { S.str = ''; S.hist = []; S.moves = 0; S.g = 0; S.flip = null; if (this.layers) map = this.layers[0]; },
+    reset() {
+      S.str = ''; S.hist = []; S.moves = 0; S.g = 0; S.flip = null;
+      if (this.layers) { map = this.layers[0]; S.px = this.start[0]; S.py = this.start[1]; S.lastCell = `${Math.floor(S.px)},${Math.floor(S.py)}`; }   // back to the floor world, so back to the start too
+    },
     hud: () => `gravity: ${S.g ? '↑ the ceiling world' : '↓ the floor world'} &nbsp;·&nbsp; reach the <span class="mono">EXIT</span> plate`,
     signs: () => [{ x: 4.5, y: 1.6, z: .78, text: S.won ? 'OPEN' : 'EXIT', size: .3, color: S.won ? '#ffe9a0' : '#f6e7b8' }],
     act: p => escherAct(p),
@@ -405,8 +408,8 @@ function render3D() {
   ctx.putImageData(img, 0, 0);
   // billboards: plate labels + gate sign
   const label = (wx, wy, z, text, size, color) => {
-    const dx = wx - S.px, dy = wy - S.py, inv = 1 / (plX * dirY - dirX * plY);
-    const tx = inv * (dirY * dx - dirX * dy), ty = inv * (-plY * dx + plX * dy);
+    const dx = wx - S.px, dy = wy - S.py, det = 1 / (plX * dirY - dirX * plY);
+    const tx = det * (dirY * dx - dirX * dy), ty = det * (-plY * dx + plX * dy);
     if (ty < .3) return;
     const sx = (W / 2) * (1 + tx / ty), sy0 = H / 2 - (z - .5) * H / ty, sy = inv ? H - sy0 : sy0;
     if (sx < 0 || sx >= W || zbuf[sx | 0] < ty) return;
