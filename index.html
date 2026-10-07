@@ -47,12 +47,18 @@
     <div id="cap">Layer 1 — the Tortoise's Library. The corridor you were standing in is a line of ink on this page.</div>
     <div class="panel">
       <h2>The Tortoise's Desk</h2>
-      <div>The first line of the page (the <b>axiom</b>) is a string. The quill can rewrite it — but <i>should</i> it?</div>
-      <div>Axiom: <span id="axbtns"></span></div>
-      <h2 style="margin-top:.7em">Isomorphism Lens</h2>
-      <div>Count the <span class="mono">I</span>s in every string the system can make.</div>
+      <div>The room you left is a line of ink. You cannot beat it from inside, but can you say <i>why</i>?</div>
+      <h2 style="margin-top:.6em">1 · Isomorphism Lens</h2>
+      <div>Measure every string the system can derive.</div>
       <div><button id="lensVisited">Read my history</button><button id="lensAll">Derive everything (depth 7)</button></div>
       <div id="lens" class="mono"></div>
+      <h2 style="margin-top:.6em">2 · Submit a proof</h2>
+      <div>Claim a property that holds of the axiom, survives every rule, and rules out <span class="mono">MU</span>.</div>
+      <div><select id="claim"></select> <button id="prove">Submit proof</button></div>
+      <div id="proof" class="mono" style="min-height:2.6em"></div>
+      <h2 style="margin-top:.6em">3 · The quill</h2>
+      <div id="quillnote"></div>
+      <div>Axiom: <span id="axbtns"></span></div>
       <div style="margin-top:10px"><button id="dive"><b>Dive back in →</b></button></div>
     </div>
   </div>
@@ -112,7 +118,7 @@ map[14][2] = 0; map[14][4] = 0; map[9][2] = 0; map[9][4] = 0;
 const PLATE_COL = { 1:[201,80,58], 2:[217,164,65], 3:[58,124,201], 4:[90,163,107] };
 
 const S = {
-  layer: 0, axiom: 'MI', str: 'MI', hist: ['MI'], moves: 0, won: false, trans: null, frozen: null,
+  layer: 0, axiom: 'MI', str: 'MI', hist: ['MI'], moves: 0, won: false, proved: false, trans: null, frozen: null,
   px: 3.5, py: 21.5, a: -Math.PI / 2, lastCell: '3,21', keys: {},
 };
 
@@ -156,7 +162,7 @@ function win() {
   S.won = true;
   document.getElementById('wintext').innerHTML = S.axiom === 'MI'
     ? 'This should be impossible.' // unreachable: the invariant is #I mod 3 ≠ 0
-    : `You never beat the system from inside. You stepped out, saw that <span class="mono">#I mod 3</span> can never become 0 from <span class="mono">MI</span>, and changed the axiom to <span class="mono">${S.axiom}</span>. That is a strange loop: the proof lives one layer above the puzzle.`;
+    : `You never beat the system from inside. You stepped out, proved that the number of I's can never become a multiple of 3 from <span class="mono">MI</span>, and only then rewrote the axiom to <span class="mono">${S.axiom}</span>. That is a strange loop: the proof lives one layer above the puzzle.`;
   document.getElementById('win').style.display = 'flex';
 }
 function resetString() { S.str = S.axiom; S.hist = [S.axiom]; S.moves = 0; refreshHud(); }
@@ -281,23 +287,50 @@ function diveIn() {
 
 // layer 1 DOM
 const lensEl = document.getElementById('lens');
+const CLAIMS = [
+  { id: 'i0',   text: 'There is always at least one I',     safe: s => iCount(s) > 0 },
+  { id: 'iodd', text: 'The number of I\'s is odd',          safe: s => iCount(s) % 2 === 1 },
+  { id: 'mod3', text: 'The number of I\'s is never a multiple of 3', safe: s => iCount(s) % 3 !== 0 },
+  { id: 'ueven',text: 'The number of U\'s is even',         safe: s => (s.match(/U/g) || []).length % 2 === 0 },
+  { id: 'len',  text: 'The length is never 2',              safe: s => s.length !== 2 },
+];
+// every string M[IU]* up to length 9: a proof must survive the rules on ALL of them, not just the ones you happened to reach
+const UNIVERSE = (() => { let all = ['M'], cur = ['M']; for (let n = 1; n < 9; n++) { cur = cur.flatMap(x => [x + 'I', x + 'U']); all = all.concat(cur); } return all; })();
+function checkProof(claim, axiom) {
+  if (!claim.safe(axiom)) return { ok: false, msg: `Refuted at the start: the axiom <b>${axiom}</b> itself breaks your claim.` };
+  if (claim.safe(TARGET)) return { ok: false, msg: `Your claim does not rule out <b>${TARGET}</b>; it holds there too, so it proves nothing.` };
+  for (const s of UNIVERSE) if (claim.safe(s)) for (const r of [1,2,3,4]) for (const t of allApplications(r, s))
+    if (!claim.safe(t)) return { ok: false, msg: `Refuted: <b>${s}</b> satisfies your claim, but rule ${RULES[r].name} (${RULES[r].label}) gives <b>${t}</b>, which does not.` };
+  return { ok: true, msg: `<b>Accepted.</b> True of the axiom, preserved by every rule on every string checked, and false of ${TARGET}. No sequence of plates can ever reach ${TARGET}. You have jumped out of the system.` };
+}
+const proofEl = document.getElementById('proof'), claimEl = document.getElementById('claim');
+CLAIMS.forEach(c => { const o = document.createElement('option'); o.value = c.id; o.textContent = c.text; claimEl.appendChild(o); });
+document.getElementById('prove').onclick = () => {
+  const r = checkProof(CLAIMS.find(c => c.id === claimEl.value), S.axiom);
+  proofEl.innerHTML = r.msg; if (r.ok) { S.proved = true; tone(NOTE.M * 2, 0, .5); tone(NOTE.U, .15, .6); } else buzz();
+  buildPageUI();
+};
 function buildPageUI() {
+  document.getElementById('quillnote').innerHTML = S.proved
+    ? 'Now that you know <i>why</i> the system fails, the quill will let you rewrite the first line.'
+    : '<i>The quill is locked. It only moves for someone who understands the system, so submit a proof first.</i>';
   const box = document.getElementById('axbtns'); box.innerHTML = '';
-  AXIOMS.forEach(a => { const b = document.createElement('button'); b.textContent = a; b.className = a === S.axiom ? 'on' : ''; b.onclick = () => { S.axiom = a; buildPageUI(); lensEl.innerHTML = `Axiom rewritten to <b>${a}</b> (<span class="mono">#I = ${iCount(a)}</span>). Use the lens to see what that changes.`; tone(NOTE.I, 0, .2); }; box.appendChild(b); });
+  AXIOMS.forEach(a => { const b = document.createElement('button'); b.textContent = a; b.className = a === S.axiom ? 'on' : ''; b.disabled = !S.proved; b.style.opacity = S.proved ? 1 : .35;
+    b.onclick = () => { S.axiom = a; buildPageUI(); lensEl.innerHTML = `Axiom rewritten to <b>${a}</b>. Use the lens to see what that changes.`; tone(NOTE.I, 0, .2); }; box.appendChild(b); });
 }
 document.getElementById('lensVisited').onclick = () => {
-  lensEl.innerHTML = S.hist.map(s => `${s.padEnd(14, ' ').replace(/ /g, '&nbsp;')} #I=${String(iCount(s)).padEnd(3, ' ').replace(/ /g, '&nbsp;')} mod 3 = ${iCount(s) % 3}`).join('<br>') +
-    `<br><i>Every string you made leaves a non-zero remainder…</i>`;
+  lensEl.innerHTML = S.hist.map(s => `${s.padEnd(14, ' ').replace(/ /g, '&nbsp;')} #I=${iCount(s)} #U=${(s.match(/U/g) || []).length} len=${s.length}`).join('<br>');
 };
 document.getElementById('lensAll').onclick = () => {
-  const set = deriveAll(S.axiom, 7), rem = {0:0,1:0,2:0}; let reach = false;
-  for (const s of set) { rem[iCount(s) % 3]++; if (s === TARGET) reach = true; }
-  lensEl.innerHTML = `Derived <b>${set.size}</b> strings from <b>${S.axiom}</b>.<br>#I mod 3 = 0: <b>${rem[0]}</b> · = 1: ${rem[1]} · = 2: ${rem[2]}<br>` +
-    (reach ? `<b style="color:#8a5a00">MU is in the set.</b> Rule III can turn the three I's into a U.`
-           : `<b>MU is not in the set.</b> Rule I and IV never change #I; rule II doubles it; rule III removes 3. If #I mod 3 starts non-zero it can never reach 0, so MU (zero I's) is out of reach. This is a property <i>of</i> the system, visible only from outside it.`);
+  const set = deriveAll(S.axiom, 7); let reach = false;
+  const seen = { i: new Set(), i3: new Set(), u: new Set(), len: new Set() };
+  for (const s of set) { if (s === TARGET) reach = true; const i = iCount(s); seen.i.add(i); seen.i3.add(i % 3); seen.u.add((s.match(/U/g) || []).length); seen.len.add(s.length); }
+  const fmt = (x, n = 8) => { const a = [...x].sort((p, q) => p - q); return '{' + a.slice(0, n).join(', ') + (a.length > n ? ', …' : '') + '}'; };
+  lensEl.innerHTML = `Derived <b>${set.size}</b> strings from <b>${S.axiom}</b>. Values seen:<br>#I: ${fmt(seen.i)}<br>#I mod 3: ${fmt(seen.i3)}<br>#U: ${fmt(seen.u)}<br>length: ${fmt(seen.len)}<br>` +
+    (reach ? `<b style="color:#8a5a00">${TARGET} is in the set.</b>` : `${TARGET} is not in the set. Is that a coincidence of depth 7, or a law?`);
 };
 document.getElementById('dive').onclick = () => { S.trans || diveIn(); };
-document.getElementById('again').onclick = () => { document.getElementById('win').style.display = 'none'; S.won = false; S.axiom = 'MI'; resetString(); S.px = 3.5; S.py = 21.5; S.a = -Math.PI / 2; };
+document.getElementById('again').onclick = () => { document.getElementById('win').style.display = 'none'; S.won = false; S.proved = false; S.axiom = 'MI'; proofEl.innerHTML = ''; lensEl.innerHTML = ''; resetString(); S.px = 3.5; S.py = 21.5; S.a = -Math.PI / 2; };
 
 // ---------------------------------------------------------------- input & loop
 addEventListener('keydown', e => {
