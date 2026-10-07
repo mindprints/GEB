@@ -51,6 +51,17 @@ Hofstadter's pq-system: axiom schema `x p - q x -` (x a run of hyphens) and one 
 - The lens (J) draws both plans side by side with plates, exit and your position. Same lesson again: each world is a dead end from inside, but the two plans together have a way through.
 - Not true non-Euclidean geometry (no portals, no genuine wall-relative gravity). That would need a real 3D engine.
 
+## Room 1 in three.js (first slice, `room1-3d.html`)
+
+Built after playing rooms 1 to 4 in the raycaster, which showed the concepts getting buried under navigation (walking between plates, tiny text in a corner, the insight living in a 2D overlay). This slice changes the interaction, not the puzzle:
+
+- **Direct manipulation, no walking.** The string is a row of 3D tiles on a table; the four rules are buttons on the table (or keys 1 to 4). Tiles animate to show what each rule does (a U drops in for rule I, the tail is copied for rule II, three I tiles merge into a U for rule III). For rules III and IV with several possible places, the matching tiles glow and you click the ones you mean, which also removes the leftmost-only limitation of the 2D version.
+- **A true jump out of the system.** J pulls the camera up through the ceiling while the room folds flat; you end above a page of a book on a desk with the room drawn on it as a plan, an inkwell and quill beside it, and the axiom and rules written below.
+- **The lens as a physical object.** "Derive everything" grows three bars on the page: derivable strings by number of I's mod 3. Under `MI` the bar at remainder 0 is empty, with a wire frame saying where `MU` would live. Rewrite the axiom to `MIII` and every string piles into that bar instead.
+- The same proof gate as the 2D game guards the quill.
+- three.js is vendored as a single classic script (`vendor/three.min.js`, bundled from three r0.186 with esbuild, MIT licence alongside), so the page also works opened from disk.
+- Not yet done: rooms 2 to 4 in this style, a hub, touch controls, and any tuning on a real GPU (tested only with software rendering at about 4 fps, so animation feel is unjudged).
+
 ## Alternatives worth considering
 
 1. **Invariant-gated JOOTS (implemented).** Jumping out (J) is always available, but the quill that rewrites the axiom only unlocks once the player has *submitted a proof*: pick a claimed invariant from a fixed menu (`#I` odd, `#I` never a multiple of 3, `#U` even, ...). The game checks it against the axiom, MU, and every rule applied to all `M[IU]*` strings up to length 9. Wrong claim: a concrete counterexample. Right claim: the quill unlocks. This keeps the core insight and is cheap to verify by brute force.

@@ -213,7 +213,7 @@ const buttons = [];
 // ledger on the left wall
 const ledgerCanvas = document.createElement('canvas'); ledgerCanvas.width = 512; ledgerCanvas.height = 768;
 const ledgerTex = new THREE.CanvasTexture(ledgerCanvas); ledgerTex.colorSpace = THREE.SRGBColorSpace;
-const ledger = new THREE.Mesh(new THREE.PlaneGeometry(5, 7.5), new THREE.MeshBasicMaterial({ map: ledgerTex })); ledger.position.set(-6.95, 2.9, -.5); ledger.rotation.y = Math.PI / 2; chamber.add(ledger);
+const ledger = new THREE.Mesh(new THREE.PlaneGeometry(3.0, 4.5), new THREE.MeshBasicMaterial({ map: ledgerTex })); ledger.position.set(-4.7, 2.7, -5.95); chamber.add(ledger);
 function drawLedger() {
   const g = ledgerCanvas.getContext('2d'), w = 512, h = 768; g.fillStyle = '#2a241c'; g.fillRect(0, 0, w, h); g.strokeStyle = '#c9a24a'; g.lineWidth = 6; g.strokeRect(10, 10, w - 20, h - 20);
   g.fillStyle = '#c9a24a'; g.font = 'italic 34px Georgia'; g.textAlign = 'center'; g.fillText('what you have derived', w / 2, 62);
@@ -248,7 +248,7 @@ function buildBars(counts) {
     const rem = lyingLabel(`#I mod 3 = ${k}`, 5.6, 1.5, '#4a3f2c', 64); rem.position.set(x, .03, 5.3); barsG.add(rem);
   });
   const ghost = new THREE.Mesh(new THREE.BoxGeometry(2.6, 9, 2.6), new THREE.MeshBasicMaterial({ color: '#9a2b2b', wireframe: true, transparent: true, opacity: .55 })); ghost.position.set(-4, 4.5, 0); barsG.add(ghost);
-  const gl = lyingLabel('MU would live here', 7.5, 1.7, '#9a2b2b', 64); gl.position.set(-4, .03, 7.4); barsG.add(gl);
+  const gl = lyingLabel('MU would live here', 7.5, 1.7, '#9a2b2b', 46); gl.position.set(-4, .03, 7.4); barsG.add(gl);
 }
 
 // ================================================================ state
@@ -389,7 +389,7 @@ cvs.addEventListener('pointermove', ev => {
 });
 cvs.addEventListener('pointerdown', ev => {
   audio(); if (S.layer !== 0 || S.anim || S.busy) return; const o = pick(ev);
-  if (S.pick) { if (!o) return; const j = S.tiles.indexOf(o); const st = S.pick.starts.find(s => j >= s && j < s + S.pick.span); if (st !== undefined) { const r = S.pick.r; clearPick(); perform(r, st); } return; }
+  if (S.pick) { if (!o) return; const j = S.tiles.indexOf(o); const st = S.pick.starts.filter(s => j >= s && j < s + S.pick.span).sort((a, b) => Math.abs(j - (a + S.pick.span / 2)) - Math.abs(j - (b + S.pick.span / 2)))[0]; if (st !== undefined) { const r = S.pick.r; clearPick(); perform(r, st); } return; }
   if (o && o.userData.rule) pressButton(o.userData.rule);
 });
 let mx = 0;
