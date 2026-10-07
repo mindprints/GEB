@@ -45,7 +45,7 @@
     <div><b>LAYER 0</b> &nbsp;<span id="roomname">The Cathedral Corridor</span></div>
     <div>string: <span id="str" class="mono">MI</span> &nbsp;→&nbsp; <span id="tgt"></span></div>
   </div>
-  <div id="rooms"><button id="r-miu">Room 1 · MIU</button><button id="r-pq">Room 2 · pq</button></div>
+  <div id="rooms"><button id="r-miu">Room 1 · MIU</button><button id="r-pq">Room 2 · pq</button><button id="r-bach">Room 3 · Bach</button></div>
   <div id="log"></div>
   <div id="say"></div>
   <div id="help">WASD / arrows: move &amp; turn · Q/E strafe · step on a plate to apply its rule<br><b>J</b>: Jump Out of the System · R: reset string</div>
@@ -72,6 +72,13 @@
         <h2>The Tortoise's Desk</h2>
         <div>The strings on the doors are just hyphens and letters. Put on the <b>Isomorphism Lens</b> and read them as arithmetic.</div>
         <div id="pqlens" class="mono" aria-live="polite"></div>
+      </div>
+      <div id="bachPanel" style="display:none">
+        <h2>The Tortoise's Desk</h2>
+        <div>The door's tune is just a list of notes. Put on the <b>Isomorphism Lens</b> to see its shape. Grey boxes are the door's tune; coloured boxes are yours.</div>
+        <canvas id="roll" width="300" height="110" style="width:100%;max-width:340px;background:#f3ecd8;border:1px solid #14110f;margin:6px 0"></canvas>
+        <div id="bachlens" class="mono" aria-live="polite"></div>
+        <div><button id="hearT">▶ hear the door</button><button id="hearMine">▶ hear mine</button></div>
       </div>
       <div style="margin-top:10px"><button id="dive"><b>Dive back in →</b></button></div>
     </div>
@@ -122,7 +129,8 @@ function allApplications(r, s) {
 // ---------------------------------------------------------------- rooms
 // map cells: 0 floor, 1 stone, 2/3 gates. plate cells hold a plate id (1..4) whose meaning comes from the room.
 let MAP_W, MAP_H, map, plate, PD, room;
-const PLATE_COL = { 1:[201,80,58], 2:[217,164,65], 3:[58,124,201], 4:[90,163,107] };
+const PLATE_COL = { 1:[201,80,58], 2:[217,164,65], 3:[58,124,201], 4:[90,163,107],
+  5:[150,110,200], 6:[190,100,170], 7:[225,125,115], 8:[100,150,225], 9:[130,130,130], 10:[110,190,130] };
 function blankMap(w, h) {
   MAP_W = w; MAP_H = h; map = []; plate = [];
   for (let y = 0; y < h; y++) { map.push([]); plate.push([]);
@@ -132,6 +140,26 @@ const PQ_TRUE = '--p---q-----', PQ_FALSE = '--p--q-----';             // 2+3=5 a
 const pqParse = s => { const m = /^(-+)p(-+)q(-+)$/.exec(s); return m && [m[1].length, m[2].length, m[3].length]; };
 const pqRead = s => { const n = pqParse(s); return n ? `${n[0]} + ${n[1]} = ${n[2]}` : '(not yet a sentence)'; };
 const pqTrue = s => { const n = pqParse(s); return !!n && n[0] + n[1] === n[2]; };
+const BACH_NOTES = ['C', 'D', 'E', 'F', 'G'], BACH_FREQ = [261.63, 293.66, 329.63, 349.23, 392.0];
+const BACH_T = [0, 3, 1, 1, 3, 0, 4, 1, 3];                                  // subject, retrograde, inversion
+const bachNames = a => a.map(n => BACH_NOTES[n]).join(' ');
+const bachEq = (a, b) => a.length === b.length && a.every((n, i) => n === b[i]);
+const bachRet = a => [...a].reverse(), bachInv = a => a.map(n => 4 - n);
+function bachPlay(a) { a.forEach((n, i) => tone(BACH_FREQ[n], i * .28, .45)); }
+function bachAct(p) {
+  if (p <= 5) {
+    if (S.rec.length >= 3) { buzz(); say('Cathedral', 'A subject is at most three notes. Step on the clear plate to start over.', 2800); return; }
+    S.rec.push(p - 1); tone(BACH_FREQ[p - 1], 0, .4);
+  } else if (p <= 8) {
+    if (!S.rec.length) { buzz(); say('Cathedral', 'Play a subject first: step on the note plates (C to G).', 2800); return; }
+    const add = p === 6 ? S.rec : p === 7 ? bachRet(S.rec) : bachInv(S.rec);
+    if (S.ph.length + add.length > BACH_T.length) { buzz(); say('Cathedral', 'The phrase is full. Step on the clear plate to start over.', 2800); return; }
+    S.ph.push(...add); S.hist.push(bachNames(S.ph)); bachPlay(add);
+  } else if (p === 9) { S.rec = []; S.ph = []; S.hist = []; tone(180, 0, .2); }
+  else bachPlay(S.ph);
+  S.moves++; S.str = bachNames(S.ph); refreshHud(); hint();
+  if (bachEq(S.ph, BACH_T)) win();
+}
 const ROOMS = {
   miu: { id: 'miu', name: 'The Cathedral Corridor', winGate: 2, start: [3.5, 21.5], next: 'pq',
     build() {
@@ -157,7 +185,7 @@ const ROOMS = {
     winText: () => S.axiom === 'MI' ? 'This should be impossible.'
       : `You never beat the system from inside. You stepped out, proved that the number of I's can never become a multiple of 3 from <span class="mono">MI</span>, and only then rewrote the axiom to <span class="mono">${S.axiom}</span>. That is a strange loop: the proof lives one layer above the puzzle.`,
   },
-  pq: { id: 'pq', name: 'The pq Hall', winGate: 3, start: [4.5, 19.5], next: null,
+  pq: { id: 'pq', name: 'The pq Hall', winGate: 3, start: [4.5, 19.5], next: 'bach',
     build() {
       blankMap(9, 22);
       for (let x = 1; x <= 3; x++) map[1][x] = 2;                              // left door
@@ -179,10 +207,35 @@ const ROOMS = {
     welcome: ['Tortoise', 'Hyphens, a <span class="mono">p</span> and a <span class="mono">q</span>. Meaningless marks, Achilles, until someone decides what they mean.'],
     winText: () => `You built <span class="mono">${PQ_TRUE}</span> by pushing symbols alone, and it turned out to say <b>2 + 3 = 5</b>. The other door, <span class="mono">${PQ_FALSE}</span> (2 + 2 = 5), could never be built: the rules only ever make true sentences. This is an <b>isomorphism</b>: a meaning-blind game of symbols that mirrors arithmetic. Room 1 was the same trick in reverse; there the lens told you what could <i>not</i> happen.`,
   },
+  bach: { id: 'bach', name: 'The Fugue Hall', winGate: 2, start: [4.5, 20.5], next: null,
+    build() {
+      blankMap(11, 22);
+      for (let x = 1; x <= 9; x++) map[1][x] = 2;                              // the door
+      [1, 3, 5, 7, 9].forEach((x, i) => plate[16][x] = i + 1);                 // five pitches
+      plate[12][2] = 6; plate[12][5] = 7; plate[12][8] = 8;                    // copy / backwards / upside down
+      plate[7][3] = 9; plate[7][7] = 10;                                       // clear / play
+      PD = {};
+      BACH_NOTES.forEach((n, i) => PD[i + 1] = { name: n, label: 'subject +' });
+      PD[6] = { name: 'ANS', label: 'answer: copy' }; PD[7] = { name: 'RET', label: 'answer: backwards' };
+      PD[8] = { name: 'INV', label: 'answer: upside down' }; PD[9] = { name: '∅', label: 'clear' }; PD[10] = { name: '▶', label: 'play the phrase' };
+    },
+    reset() { S.rec = []; S.ph = []; S.str = ''; S.hist = []; S.moves = 0; },
+    hud: () => `subject: <span class="mono">${bachNames(S.rec) || '—'}</span> &nbsp;·&nbsp; the door sings: <span class="mono">${bachNames(BACH_T)}</span>`,
+    signs: () => [{ x: 5.5, y: 1.6, z: .78, text: bachNames(BACH_T), size: .17, color: S.won ? '#ffe9a0' : '#f6e7b8' }],
+    act: p => bachAct(p),
+    hints: [[3, 'Achilles', 'I can only hold three notes in my head at once, Tortoise, and the door sings nine!'],
+            [8, 'Tortoise', 'A fugue answers itself, Achilles. Part of the tune may be the subject read <i>backwards</i>, or turned <i>upside down</i>. Press <b>J</b> and look at the score.']],
+    intro: `<h2 style="color:var(--gold);margin-top:0">Room 3 · The Fugue Hall</h2>
+      <p>The door sings a nine-note tune (shown on the door and top right). You can only remember a <b>subject</b> of up to three notes, but you can <b>answer</b> it.</p>
+      <p><b>C D E F G</b> plates add a note to your subject (three at most). <b>ANS</b> adds a copy of the subject to the phrase, <b>RET</b> adds it played backwards, <b>INV</b> adds it turned upside down (high becomes low). <b>▶</b> plays the phrase, <b>∅</b> clears.</p>
+      <p>Build the door's tune. Press <b>J</b> if you cannot hear its shape.</p>`,
+    welcome: ['Tortoise', 'Nine notes on the door, Achilles, and a hall that lets you repeat yourself in three ways. Bach would approve.'],
+    winText: () => `The door sang <span class="mono">${bachNames(BACH_T)}</span> and you built it from a three-note subject: <b>${bachNames(BACH_T.slice(0, 3))}</b>, then the same notes <b>backwards</b> (cancrizans, the crab canon's trick), then <b>turned upside down</b> (inversion). Three rooms, one idea: a structure hidden inside a pattern becomes visible when you step outside it and look at the pattern as a whole.`,
+  },
 };
 
 const S = {
-  layer: 0, axiom: 'MI', str: 'MI', hist: ['MI'], moves: 0, won: false, proved: false, trans: null, frozen: null, x: 1,
+  layer: 0, axiom: 'MI', str: 'MI', hist: ['MI'], moves: 0, won: false, proved: false, trans: null, frozen: null, x: 1, rec: [], ph: [],
   px: 3.5, py: 21.5, a: -Math.PI / 2, lastCell: '3,21', keys: {},
 };
 
@@ -382,7 +435,25 @@ document.getElementById('prove').onclick = () => {
   proofEl.innerHTML = r.msg; if (r.ok) { S.proved = true; tone(NOTE.M * 2, 0, .5); tone(NOTE.U, .15, .6); } else buzz();
   buildPageUI();
 };
+function buildBachPage() {
+  const g = [BACH_T.slice(0, 3), BACH_T.slice(3, 6), BACH_T.slice(6, 9)];
+  const cv2 = document.getElementById('roll'), c = cv2.getContext('2d'), cw = cv2.width / 9, ch = cv2.height / 5;
+  c.clearRect(0, 0, cv2.width, cv2.height); c.lineWidth = 1;
+  c.strokeStyle = 'rgba(20,17,15,.15)'; for (let r = 1; r < 5; r++) { c.beginPath(); c.moveTo(0, r * ch); c.lineTo(cv2.width, r * ch); c.stroke(); }
+  c.strokeStyle = 'rgba(20,17,15,.35)'; for (const k of [3, 6]) { c.beginPath(); c.moveTo(k * cw, 0); c.lineTo(k * cw, cv2.height); c.stroke(); }
+  BACH_T.forEach((n, i) => { c.strokeStyle = '#14110f'; c.lineWidth = 2; c.strokeRect(i * cw + 3, (4 - n) * ch + 3, cw - 6, ch - 6); });
+  S.ph.forEach((n, i) => { c.fillStyle = n === BACH_T[i] ? '#2a6b2a' : '#a47b2a'; c.fillRect(i * cw + 6, (4 - n) * ch + 6, cw - 12, ch - 12); });
+  const rev = bachEq(g[1], bachRet(g[0])), inv = bachEq(g[2], bachInv(g[0]));
+  document.getElementById('bachlens').innerHTML =
+    `Cut the tune into threes: <b>${g.map(bachNames).join(' | ')}</b><br>` +
+    (rev ? `Phrase 2 is phrase 1 read <b>backwards</b> (cancrizans).<br>` : '') +
+    (inv ? `Phrase 3 is phrase 1 <b>turned upside down</b> (each pitch p becomes 4-p, a mirror across E).<br>` : '') +
+    `<br>You hold: subject <b>${bachNames(S.rec) || '—'}</b>, phrase <b>${bachNames(S.ph) || '—'}</b> (${S.ph.filter((n, i) => n === BACH_T[i]).length} of 9 notes in place).`;
+}
+document.getElementById('hearT').onclick = () => bachPlay(BACH_T);
+document.getElementById('hearMine').onclick = () => bachPlay(S.ph);
 function buildPageUI() {
+  if (room.id === 'bach') return buildBachPage();
   if (room.id === 'pq') return buildPqPage();
   document.getElementById('quillnote').innerHTML = S.proved
     ? 'Now that you know <i>why</i> the system fails, the quill will let you rewrite the first line.'
@@ -412,7 +483,7 @@ document.getElementById('lensAll').onclick = () => {
 document.getElementById('dive').onclick = () => { S.trans || diveIn(); };
 document.getElementById('again').onclick = () => loadRoom(room.id, false);
 document.getElementById('nextroom').onclick = () => loadRoom(room.next);
-for (const id of ['miu', 'pq']) document.getElementById('r-' + id).onclick = () => { if (!S.trans) loadRoom(id); };
+for (const id of Object.keys(ROOMS)) document.getElementById('r-' + id).onclick = () => { if (!S.trans) loadRoom(id); };
 
 // ---------------------------------------------------------------- input & loop
 const introEl = document.getElementById('intro');
@@ -429,12 +500,13 @@ function loadRoom(id, withIntro = true) {
   document.getElementById('roomname').textContent = room.name;
   document.getElementById('miuPanel').style.display = id === 'miu' ? '' : 'none';
   document.getElementById('pqPanel').style.display = id === 'pq' ? '' : 'none';
+  document.getElementById('bachPanel').style.display = id === 'bach' ? '' : 'none';
   for (const r of Object.keys(ROOMS)) document.getElementById('r-' + r).className = r === id ? 'on' : '';
   proofEl.innerHTML = ''; lensEl.innerHTML = '';
   refreshHud();
   if (withIntro) showIntro(room.intro);
   say(room.welcome[0], room.welcome[1], 6500);
-  history.replaceState(null, '', id === 'pq' ? '#pq' : location.pathname + location.search);
+  history.replaceState(null, '', id === 'miu' ? location.pathname + location.search : '#' + id);
 }
 addEventListener('keydown', e => {
   if (introEl.style.display !== 'none') { closeIntro(); return; }
@@ -465,9 +537,9 @@ function frame(now) {
   else drawPage();
   requestAnimationFrame(frame);
 }
-loadRoom(location.hash === '#pq' ? 'pq' : 'miu');
+loadRoom(ROOMS[location.hash.slice(1)] ? location.hash.slice(1) : 'miu');
 requestAnimationFrame(frame);
-window.GEB = { S, RULES, applyRule, deriveAll, iCount, jootsOut, diveIn, buildPageUI, TARGET, loadRoom, pqAct, pqParse, PQ_TRUE, PQ_FALSE, get room() { return room; } };
+window.GEB = { S, RULES, applyRule, deriveAll, iCount, jootsOut, diveIn, buildPageUI, TARGET, loadRoom, pqAct, pqParse, PQ_TRUE, PQ_FALSE, bachAct, BACH_T, get room() { return room; } };
 </script>
 </body>
 </html>
