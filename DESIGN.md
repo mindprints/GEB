@@ -31,7 +31,7 @@ Known prototype limits: rules III/IV act on the leftmost match only in the FPV; 
 
 ## Alternatives worth considering
 
-1. **Invariant-gated JOOTS (implemented).** Jumping out is only available once the player has *submitted a proof*: pick the invariant from a set of candidate lenses (`#I`, `#U`, `length`, `#I mod 3`) and the game verifies it against all derivable strings. Wrong lens: the system shows a counterexample. Right lens: the layer opens. This keeps the core insight and is cheap to verify by brute force.
+1. **Invariant-gated JOOTS (implemented).** Jumping out (J) is always available, but the quill that rewrites the axiom only unlocks once the player has *submitted a proof*: pick a claimed invariant from a fixed menu (`#I` odd, `#I` never a multiple of 3, `#U` even, ...). The game checks it against the axiom, MU, and every rule applied to all `M[IU]*` strings up to length 9. Wrong claim: a concrete counterexample. Right claim: the quill unlocks. This keeps the core insight and is cheap to verify by brute force.
 2. **Solvable-from-inside variant.** Use the book's other systems (the pq-system, the Tortoise's "Typographical Number Theory" fragments). A pq-system puzzle is *solvable* and teaches isomorphism: `-p--q---` is "2+1=3". Pair a solvable system with an unsolvable one so the player learns when to stop.
 3. **Layer as object, not camera.** Each layer is a physical toy in the layer above (a diorama on a desk). JOOTS becomes picking the room up. Rendering stays simple: one extra camera and a render texture.
 4. **Bach slice first.** The most gameplay per engineering hour: a recorder that plays your moves as reversed / inverted / augmented voices, with platforms driven by a fugue subject. Closest to a shippable core loop.
