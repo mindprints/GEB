@@ -130,7 +130,7 @@ function makeGate(cx, w = 4.4) {                                   // a door in 
   const door = box(chamber, w - .5, 4.2, .35, cx, 2.15, -5.85, doorM);
   for (let i = -1; i <= 1; i++) box(chamber, .12, 4.2, .1, cx + i * (w - .5) / 3, 2.15, -5.64, std({ color: '#b08a30', metalness: .5, roughness: .4 }));
   const glow = new THREE.PointLight('#fff2c0', 0, 20); glow.position.set(cx, 2.5, -4.5); chamber.add(glow);
-  return { door, glow, open() { tween(1.6, u => { door.position.y = 2.15 + 4.6 * u; glow.intensity = 3 * u; }); } };
+  return { door, glow, open() { tween(1.6, u => { door.position.y = 2.15 - 4.4 * u; glow.intensity = 3 * u; }); } };   // the door sinks into the floor
 }
 
 // tiles ---------------------------------------------------------------
@@ -178,7 +178,7 @@ function morphRow(row, neu, keep, spawns, o = {}) {
       t.scale.set(lerp(st[ni].s.x, L[ni].sx, e), lerp(st[ni].s.y, L[ni].sy, e), lerp(st[ni].s.z, L[ni].sz, e)); });
     vs.forEach(v => { const tgt = o.vanishTo !== undefined ? new THREE.Vector3(L[o.vanishTo].x, L[o.vanishTo].y, L[o.vanishTo].z) : v.p0, k = clamp01(u * 1.5);
       v.t.position.lerpVectors(v.p0, tgt, k); v.t.position.y += .5 * Math.sin(u * Math.PI); const sc = Math.max(.001, 1 - k); v.t.scale.set(v.s0.x * sc, v.s0.y * sc, v.s0.z * sc); });
-  }, () => { vs.forEach(v => chamber.remove(v.t)); row.tiles = nt; S.busy--; o.done && o.done(); });
+  }, () => { vs.forEach(v => chamber.remove(v.t)); row.tiles = nt; S.busy--; o.done && o.done(); flush(); });
 }
 function signRow(str, cx, y, z, unit, yOf) {                       // static tiles, e.g. the tune or string on a door
   const row = makeRow({ cx, z, maxW: 99, unit, yOf }), L = row.layout(str);
@@ -195,10 +195,12 @@ function press(b) { tween(.18, u => { b.position.y = b.userData.y0 - .12 * Math.
 function shake(m) { const x0 = m.position.x; tween(.25, u => { m.position.x = x0 + Math.sin(u * 24) * .12 * (1 - u); }, () => { m.position.x = x0; }); }
 
 // ================================================================ state, tweens, speech
-const S = { room: null, layer: 0, anim: null, busy: 0, t: 0, won: false, proved: false, axiom: 'MI', hist: [], moves: 0, hover: null, click: [] };
+const S = { queue: [], room: null, layer: 0, anim: null, busy: 0, t: 0, won: false, proved: false, axiom: 'MI', hist: [], moves: 0, hover: null, click: [] };
 const R = {};                                                         // per-room scratch state
 const tweens = [];
 function tween(dur, fn, done) { tweens.push({ t: 0, dur, fn, done }); }
+function enqueue(fn) { if (S.queue.length < 8) S.queue.push(fn); flush(); }
+function flush() { while (S.queue.length && !S.busy && !S.anim) S.queue.shift()(); }
 function runTweens(dt) { for (let i = tweens.length - 1; i >= 0; i--) { const T = tweens[i]; T.t = Math.min(T.dur, T.t + dt); T.fn(ease(T.t / T.dur)); if (T.t >= T.dur) { tweens.splice(i, 1); T.done && T.done(); } } }
 let sayT = 0;
 function say(who, text, ms = 6500) { const e = $('say'); e.innerHTML = `<b>${who}:</b> ${text}`; e.style.display = 'block'; clearTimeout(sayT); sayT = setTimeout(() => e.style.display = 'none', ms); }
@@ -434,10 +436,10 @@ const PQ = {
 const NN = ['C', 'D', 'E', 'F', 'G'], NF = [261.63, 293.66, 329.63, 349.23, 392.0], BACH_T = [0, 3, 1, 1, 3, 0, 4, 1, 3];
 const nn = a => a.map(n => NN[n]).join(''), nEq = (a, b) => a.length === b.length && a.every((n, i) => n === b[i]), nRet = a => [...a].reverse(), nInv = a => a.map(n => 4 - n);
 const playNotes = a => a.forEach((n, i) => tone(NF[n], i * .28, .45));
-const yOfNote = (i, ch) => NN.indexOf(ch) * .3;
+const yOfNote = (i, ch) => .45 + NN.indexOf(ch) * .3;
 const BACH = {
   id: 'bach', name: 'The fugue hall', tab: 'Room 3 · Bach', next: 'escher',
-  cam: { halfW: 8.8, target: [0, 2.2, .2], pitch: 22 }, page: { cx: 8, cz: 3, halfW: 21, halfD: 11.5, pitch: 54 },
+  cam: { halfW: 8.8, target: [0, 2.9, .3], pitch: 22 }, page: { cx: 8, cz: 3, halfW: 21, halfD: 11.5, pitch: 54 },
   keys: 'click the keys and buttons · J: jump out · R: clear · 1 to 5: C to G',
   hud: () => `subject: <span class="mono">${nn(R.rec) || '—'}</span> &nbsp;·&nbsp; the door sings: <span class="mono">${nn(BACH_T)}</span>`,
   intro: `<h2 style="color:var(--gold);margin-top:0">Room 3 · The fugue hall</h2>
@@ -447,12 +449,13 @@ const BACH = {
   welcome: ['Tortoise', 'Nine notes on the door, Achilles, and a table that lets you repeat yourself in three ways. Bach would approve.'],
   hints: [[3, 'Achilles', 'I can only hold three notes in my head at once, Tortoise, and the door sings nine!'], [8, 'Tortoise', 'A fugue answers itself, Achilles. Part of the tune may be the subject read <i>backwards</i>, or turned <i>upside down</i>. Press <b>J</b> and look at the score.']],
   build() {
-    buildStage(6.6, 0); R.gate = makeGate(0, 4.4); signRow(nn(BACH_T), 0, 5.0, -5.8, .55, yOfNote);
+    buildStage(7.8, .2); R.gate = makeGate(0, 4.4); signRow(nn(BACH_T), 0, 4.9, -5.8, .5, (i, ch) => NN.indexOf(ch) * .2);
     R.rec = []; R.ph = [];
-    R.phrase = makeRow({ cx: 0, z: -2.1, maxW: 13, unit: 1.2, yOf: yOfNote }); R.sub = makeRow({ cx: -3.5, z: -.5, maxW: 5.5, unit: 1.2, yOf: yOfNote });
+    R.phrase = makeRow({ cx: 0, z: -2.6, maxW: 13, unit: 1.15, yOf: yOfNote }); R.sub = makeRow({ cx: -3.2, z: 0, maxW: 5.2, unit: 1.0 });
+    const tl = (t, x, z) => { const m = lyingLabel(t, 3, 1, '#f2ecd8', 56, chamber); m.position.set(x, TABLE_TOP + .07, z); }; tl('phrase', -6.4, -3.35); tl('subject', -6.4, .85);
     R.stems = [];
-    R.acts = [['ANS', 'copy', '#2c4a3a', 1], ['RET', 'backwards', '#4a3a2c', 2], ['INV', 'upside down', '#2c3a4a', 3], ['▶', 'play', '#2c4a4a', 4], ['∅', 'clear', '#4a2c2c', 5]].map(([l, s, c, k], i) => makeButton(l, s, (i - 2) * 2.3 + 2.0, 1.35, c, 1.7, () => this.act(k)));
-    R.keys = NN.map((n, i) => { const m = makeButton(n, '', (i - 2) * 1.75 - 0, 3.0, ['#7a3a35', '#8a5a2f', '#807130', '#3a6a47', '#2f4f80'][i], 1.5, () => this.addNote(i)); return m; });
+    R.acts = [['ANS', 'copy', '#2c4a3a', 1], ['RET', 'backwards', '#4a3a2c', 2], ['INV', 'upside down', '#2c3a4a', 3], ['▶', 'play', '#2c4a4a', 4], ['∅', 'clear', '#4a2c2c', 5]].map(([l, s, c, k], i) => makeButton(l, s, (i - 2) * 2.3 + 2.0, 1.75, c, 1.7, () => this.act(k)));
+    R.keys = NN.map((n, i) => { const m = makeButton(n, '', (i - 2) * 1.75, 3.5, ['#7a3a35', '#8a5a2f', '#807130', '#3a6a47', '#2f4f80'][i], 1.3, () => this.addNote(i)); return m; });
     this.reset();
   },
   reset() { R.rec = []; R.ph = []; S.hist = []; S.moves = 0; R.sub.build(''); R.phrase.build(''); },
@@ -516,11 +519,11 @@ function ePath(from, to, g) {                                        // shortest
 const ESC = {
   id: 'escher', name: 'The gravity hall', tab: 'Room 4 · Escher', next: null,
   cam: { halfW: 8.6, target: [0, 3.0, 0], pitch: 40 }, page: { cx: 8, cz: 3, halfW: 21, halfD: 11.5, pitch: 54 },
-  keys: 'click a square to walk the pawn there (it stops on ⇅ plates) · arrow keys step · J: jump out · R: restart',
+  keys: 'click a square to walk the pawn there (it stops on ⇅ plates) · click the plate you stand on to flip again · arrow keys step · J: jump out · R: restart',
   hud: () => `gravity: ${R.g ? '↑ the ceiling world' : '↓ the floor world'} &nbsp;·&nbsp; reach the green <span class="mono">EXIT</span> square`,
   intro: `<h2 style="color:var(--gold);margin-top:0">Room 4 · The gravity hall</h2>
     <p>A model of an impossible building. It exists <b>twice</b> in the same footprint: a floor world (the pawn stands on the tray) and a ceiling world (the pawn hangs under the glass). Their walls differ.</p>
-    <p>Click a square to walk the pawn there. The gold <b>⇅</b> squares flip gravity: they exist in both worlds, so the pawn always has ground to stand on. A wall in one world can be open ground in the other.</p>
+    <p>Click a square to walk the pawn there. The gold <b>⇅</b> squares flip gravity (click the one you are standing on to flip again): they exist in both worlds, so the pawn always has ground to stand on. A wall in one world can be open ground in the other.</p>
     <p>Reach the green <b>EXIT</b> square at the far right. Press <b>J</b> to see both plans side by side.</p><p style="opacity:.7;font-size:.9em">Click or press any key to begin.</p>`,
   welcome: ['Tortoise', 'An impossible building, Achilles: one staircase, two destinations. Mind which way is up.'],
   hints: [[2, 'Achilles', 'Tortoise, I stepped on that plate and the pawn turned upside down! The walls are not where I left them.'], [5, 'Tortoise', 'Two halls share one floor plan, Achilles; each plate decides which one you are standing in. Press <b>J</b> and look at both plans at once.']],
@@ -550,7 +553,7 @@ const ESC = {
   onPoint(pt) {
     if (S.busy || R.walking || S.won) return; const i = Math.round(pt.x / CS) + 6, k = Math.round(pt.z / CS), x = k + 4, y = 14 - i;
     if (!eOpen(x, y, R.g)) { buzz(); say('Cathedral', 'That square is a wall in this world.', 2200); return; }
-    if (x === R.cell[0] && y === R.cell[1]) return; const path = ePath(R.cell, [x, y], R.g); if (!path) { buzz(); say('Cathedral', 'No way there in this world. Is there a plate to flip at?', 2800); return; } this.walk(path);
+    if (x === R.cell[0] && y === R.cell[1]) { if (isPlate(x, y)) this.flip(); return; } const path = ePath(R.cell, [x, y], R.g); if (!path) { buzz(); say('Cathedral', 'No way there in this world. Is there a plate to flip at?', 2800); return; } this.walk(path);
   },
   onKey(k) { const d = { arrowleft: [0, 1], arrowright: [0, -1], arrowup: [-1, 0], arrowdown: [1, 0], a: [0, 1], d: [0, -1], w: [-1, 0], s: [1, 0] }[k]; if (k === 'r') { this.reset(); refreshHud(); return; }
     if (!d || R.walking || S.busy || S.won) return; const x = R.cell[0] + d[0], y = R.cell[1] + d[1]; if (eOpen(x, y, R.g)) this.walk([[x, y]]); else buzz(); },
@@ -591,7 +594,7 @@ const ESC = {
 const ROOMS = { miu: MIU, pq: PQ, bach: BACH, escher: ESC };
 function refreshHud() { $('hudright').innerHTML = S.room.hud(); }
 function loadRoom(id, withIntro = true) {
-  tweens.length = 0; S.room = ROOMS[id]; Object.assign(S, { layer: 0, anim: null, busy: 0, t: 0, won: false, proved: false, axiom: 'MI', hist: [], moves: 0 });
+  tweens.length = 0; S.room = ROOMS[id]; Object.assign(S, { queue: [], layer: 0, anim: null, busy: 0, t: 0, won: false, proved: false, axiom: 'MI', hist: [], moves: 0 });
   Object.keys(R).forEach(k => delete R[k]); pageG.clear(); pageTextMesh = null; $('win').style.display = 'none'; $('panel').style.display = 'none'; $('jump').style.display = '';
   $('panel').innerHTML = S.room.panel + '<div style="margin-top:10px"><button id="dive"><b>Dive back in ⤵</b></button></div>'; $('dive').onclick = diveIn; S.room.initPanel(); S.room.build();
   $('hudroom').textContent = 'ROOM ' + (Object.keys(ROOMS).indexOf(id) + 1); $('hudname').textContent = S.room.name; $('keys').textContent = S.room.keys;
@@ -612,7 +615,7 @@ function pickAt(ev) {
 cvs.addEventListener('pointermove', ev => { mx = ev.clientX / innerWidth * 2 - 1; if (S.layer !== 0 || S.anim) { cvs.style.cursor = ''; return; } const h = pickAt(ev); cvs.style.cursor = h && (h.object.userData.onClick || h.object.userData.tile || S.room === ESC) ? 'pointer' : ''; });
 cvs.addEventListener('pointerdown', ev => {
   audio(); if (S.layer !== 0 || S.anim) return; const h = pickAt(ev); if (!h) return;
-  if (S.room === ESC) { S.room.onPoint(h.point); return; } if (!S.busy) S.room.onClick(h.object);
+  if (S.room === ESC) { S.room.onPoint(h.point); return; } const o = h.object; enqueue(() => S.room.onClick(o));
 });
 const introEl = $('intro');
 function closeIntro() { if (introEl.style.display !== 'none') { introEl.style.display = 'none'; audio(); cvs.focus(); } }
@@ -620,7 +623,7 @@ introEl.addEventListener('click', closeIntro);
 addEventListener('keydown', e => {
   if (introEl.style.display !== 'none') { closeIntro(); return; } audio(); if (e.target.tagName === 'SELECT' || e.metaKey || e.ctrlKey) return; const k = e.key.toLowerCase();
   if (k === 'j') { S.layer === 0 ? jumpOut() : diveIn(); return; }
-  if (S.layer === 0 && !S.anim) { S.room.onKey(k); if (k.startsWith('arrow')) e.preventDefault(); }
+  if (S.layer === 0 && !S.anim) { if (k.startsWith('arrow')) e.preventDefault(); if (S.room === ESC) S.room.onKey(k); else enqueue(() => S.room.onKey(k)); }
 });
 
 // ---------------------------------------------------------------- loop
