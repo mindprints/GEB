@@ -47,7 +47,7 @@ Hofstadter's pq-system: axiom schema `x p - q x -` (x a run of hyphens) and one 
 ## Room 4: the Gravity Hall (implemented, first pass)
 
 - Escher's impossible architecture, done within the same raycaster without real 3D: the hall exists **twice** (a floor world and a ceiling world) with the same footprint but different walls. **⇅** plates flip gravity: the view turns upside down with a card-flip animation and the player is swapped into the other world at the same spot. Plates are open ground in both worlds, so you can always step off them. Reach the EXIT plate to open the gate.
-- The two layouts were found by a seeded search (`seed 6`) for a maze needing at least 3 flips with a 20-step shortest route and no route without flips, and the solution is replayed through the live engine in testing.
+- The two layouts were found by a seeded search for a maze whose **minimum number of flips** is 4 (so 5 clicks in the 3D version) and where neither world reaches the exit alone. An earlier version of the search scored the flips along the shortest-*step* route, not the fewest flips, so a one-flip shortcut slipped through; the click-to-walk 3D interface exposed it (two clicks to the exit). Verified by a state-space BFS over (plate, world) and by replaying the route with real pointer clicks.
 - The lens (J) draws both plans side by side with plates, exit and your position. Same lesson again: each world is a dead end from inside, but the two plans together have a way through.
 - Not true non-Euclidean geometry (no portals, no genuine wall-relative gravity). That would need a real 3D engine.
 
@@ -63,7 +63,7 @@ Built after playing the raycaster rooms, which showed the concepts getting burie
   - Room 2: beads for each hyphen run, with + and = and a true/false mark, for your stone and both doors.
   - Room 3: a piano roll of the door's tune against yours, with the backwards and upside-down phrases named.
   - Room 4: both plans side by side.
-- **Room 4 as a model.** The hall is a tray with two layers: floor-world walls stand on it, ceiling-world walls hang from a glass sheet above. The pawn walks one world at a time (click a square; it stops on gold plates, and clicking the plate you stand on flips again). The inactive world is drawn as a ghost.
+- **Room 4 as a model.** The hall is a tray with two layers: floor-world walls stand on it, ceiling-world walls hang from a glass sheet above. The pawn walks one world at a time (click a square; it stops on gold plates, and clicking the plate you stand on flips again). Only the active world's walls and plates are drawn solid (the other fades to a ghost), the plates the pawn can currently reach pulse, and the HUD shows which world you are in and how many flips you have used.
 - three.js is vendored as a single classic script (`vendor/three.min.js`, three r0.186 bundled with esbuild, MIT licence alongside), so the page also works opened from disk. `room1-3d.html` redirects to `3d.html`.
 - **Not done:** touch tuning, tuning on a real GPU (tested only with software rendering at about 4 fps, so animation feel is unjudged), and any new puzzle content.
 
