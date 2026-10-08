@@ -502,9 +502,9 @@ function syncStems() {
 }
 
 // ================================================================ ROOM 4: the gravity hall (a model you walk a pawn through)
-const ESCHER = { G: [[1, 12], [3, 9], [5, 14], [6, 12]], exit: [4, 2], start: [4, 14],
-  L: [["#########", "#########", "##...#..#", "##...##.#", "#..#...##", "#..##..##", "#.....#.#", "###.#..##", "##..##..#", "#....##.#", "###....##", "#.###...#", "#.#.....#", "#...#...#", "##......#", "#########"],
-      ["#########", "#########", "##......#", "#....##.#", "##.#.#..#", "#...###.#", "##..#...#", "#...#..##", "###..#.##", "#.#...###", "#......##", "#...##..#", "#...##.##", "#.###..##", "#.......#", "#########"]] };
+const ESCHER = { G: [[4, 9], [4, 10], [5, 13], [2, 8], [5, 8]], exit: [4, 2], start: [4, 14],
+  L: [["#########", "#########", "##.#....#", "##.###.##", "#.......#", "#....#..#", "#...#.###", "#.#.....#", "#...#.#.#", "#.#...#.#", "##.#.#..#", "#...#.###", "##...#..#", "#####...#", "##.....##", "#########"],
+      ["#########", "#########", "#......##", "##......#", "#....#..#", "###...#.#", "#..#..#.#", "#...#.#.#", "#..#..#.#", "####.#..#", "#.....#.#", "##...#.##", "#..#....#", "#......##", "#......##", "#########"]] };
 const CS = .85, GLASS_Y = TABLE_TOP + 3.0;
 const ek = (x, y) => x + ',' + y, isPlate = (x, y) => ESCHER.G.some(p => p[0] === x && p[1] === y), isExit = (x, y) => x === ESCHER.exit[0] && y === ESCHER.exit[1];
 const eWorld = (x, y, g) => new THREE.Vector3((14 - y - 6) * CS, g ? GLASS_Y - .05 : TABLE_TOP + .1, (x - 4) * CS);
@@ -519,13 +519,13 @@ function ePath(from, to, g) {                                        // shortest
 const ESC = {
   id: 'escher', name: 'The gravity hall', tab: 'Room 4 · Escher', next: null,
   cam: { halfW: 8.6, target: [0, 3.0, 0], pitch: 40 }, page: { cx: 8, cz: 3, halfW: 21, halfD: 11.5, pitch: 54 },
-  keys: 'click a square to walk the pawn there (it stops on ⇅ plates) · click the plate you stand on to flip again · arrow keys step · J: jump out · R: restart',
-  hud: () => `gravity: ${R.g ? '↑ the ceiling world' : '↓ the floor world'} &nbsp;·&nbsp; reach the green <span class="mono">EXIT</span> square`,
+  keys: 'click a pulsing ⇅ plate to walk there and flip gravity · click any square to walk · arrow keys step · J: jump out and see both plans · R: restart',
+  hud: () => `<b style="color:${R.g ? '#8fb4ff' : '#e8c070'}">${R.g ? '↑ ceiling world' : '↓ floor world'}</b> &nbsp;·&nbsp; flips: ${S.moves} &nbsp;·&nbsp; reach the green <span class="mono">EXIT</span>`,
   intro: `<h2 style="color:var(--gold);margin-top:0">Room 4 · The gravity hall</h2>
-    <p>A model of an impossible building. It exists <b>twice</b> in the same footprint: a floor world (the pawn stands on the tray) and a ceiling world (the pawn hangs under the glass). Their walls differ.</p>
-    <p>Click a square to walk the pawn there. The gold <b>⇅</b> squares flip gravity (click the one you are standing on to flip again): they exist in both worlds, so the pawn always has ground to stand on. A wall in one world can be open ground in the other.</p>
-    <p>Reach the green <b>EXIT</b> square at the far right. Press <b>J</b> to see both plans side by side.</p><p style="opacity:.7;font-size:.9em">Click or press any key to begin.</p>`,
-  welcome: ['Tortoise', 'An impossible building, Achilles: one staircase, two destinations. Mind which way is up.'],
+    <p>Two floor plans are stacked in one building. The <b>floor world</b> (grey walls) stands on the tray; the <b>ceiling world</b> (blue walls) hangs under the glass above it, and you walk it upside down. You are only ever in one: the other fades to a ghost.</p>
+    <p>The gold <b>⇅</b> squares exist in both worlds. The ones your pawn can reach <b>pulse</b>. Click one and the pawn walks there and gravity flips, so you swap into the other world's walls. Plates are never walls, so you can always step off.</p>
+    <p>Click a pulsing plate, look at the new world, then click again. Your goal is the green <b>EXIT</b> at the far right, and no single world reaches it. Press <b>J</b> to lay both plans side by side and plan the route.</p><p style="opacity:.7;font-size:.9em">Click or press any key to begin.</p>`,
+  welcome: ['Tortoise', 'An impossible building, Achilles: two floor plans, one footprint. Only the pulsing plates will carry you between them.'],
   hints: [[2, 'Achilles', 'Tortoise, I stepped on that plate and the pawn turned upside down! The walls are not where I left them.'], [5, 'Tortoise', 'Two halls share one floor plan, Achilles; each plate decides which one you are standing in. Press <b>J</b> and look at both plans at once.']],
   build() {
     buildStage(7.0, 0); R.g = 0; R.cell = [...ESCHER.start]; R.walking = false;
@@ -535,18 +535,21 @@ const ESC = {
     R.wallM = [std({ color: '#6b6355', transparent: true }), std({ color: '#4a6fb0', transparent: true })];
     for (let g = 0; g < 2; g++) for (let y = 2; y <= 14; y++) for (let x = 1; x <= 7; x++) if (ESCHER.L[g][y][x] === '#') {
       const p = eWorld(x, y, g), h = .9, m = box(chamber, CS * .98, h, CS * .98, p.x, g ? GLASS_Y - .03 - h / 2 : TABLE_TOP + .1 + h / 2, p.z, R.wallM[g]); }
-    const tile = (x, y, g, color, h = .06) => { const p = eWorld(x, y, g); box(chamber, CS * .82, h, CS * .82, p.x, p.y + (g ? .03 : .02), p.z, std({ color, emissive: color, emissiveIntensity: .35 })); };
-    for (let g = 0; g < 2; g++) { ESCHER.G.forEach(([x, y]) => tile(x, y, g, '#c9a24a')); tile(ESCHER.exit[0], ESCHER.exit[1], g, '#3a9a4a'); }
+    R.deco = [[], []]; const tile = (x, y, g, color, h = .06) => { const p = eWorld(x, y, g); const m = box(chamber, CS * .82, h, CS * .82, p.x, p.y + (g ? .03 : .02), p.z, std({ color, emissive: color, emissiveIntensity: .35 })); R.deco[g].push(m); return m; };
+    R.plateTiles = [[], []];
+    for (let g = 0; g < 2; g++) { ESCHER.G.forEach(([x, y]) => R.plateTiles[g].push([x, y, tile(x, y, g, '#c9a24a')])); tile(ESCHER.exit[0], ESCHER.exit[1], g, '#3a9a4a'); }
     const lab = (t, x, y, g) => { const p = eWorld(x, y, g), m = new THREE.Mesh(new THREE.PlaneGeometry(CS * .8, CS * .8), new THREE.MeshBasicMaterial({ transparent: true, map: canvasTex(128, 128, (c, w, h) => { c.fillStyle = '#14110f'; c.font = 'bold 84px Georgia'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(t, w / 2, h / 2 + 4); }) }));
-      m.position.set(p.x, p.y + (g ? -.0 : .1), p.z); m.rotation.x = g ? Math.PI / 2 : -Math.PI / 2; chamber.add(m); };
+      m.position.set(p.x, p.y + (g ? -.0 : .1), p.z); m.rotation.x = g ? Math.PI / 2 : -Math.PI / 2; chamber.add(m); R.deco[g].push(m); };
     for (let g = 0; g < 2; g++) { ESCHER.G.forEach(([x, y]) => lab('⇅', x, y, g)); lab('E', ESCHER.exit[0], ESCHER.exit[1], g); }
     R.pawn = new THREE.Group(); const cone = new THREE.Mesh(new THREE.ConeGeometry(.28, .6, 16), std({ color: '#c9503a' })); cone.position.y = .3; const ball = new THREE.Mesh(new THREE.SphereGeometry(.2, 16, 12), std({ color: '#e8d8b0' })); ball.position.y = .72;
     R.pawn.add(cone, ball); chamber.add(R.pawn);
     R.plane = new THREE.Mesh(new THREE.PlaneGeometry(40, 30), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })); R.plane.rotation.x = -Math.PI / 2; chamber.add(R.plane);
     this.reset();
   },
-  place() { const p = eWorld(R.cell[0], R.cell[1], R.g); R.pawn.position.copy(p); R.pawn.rotation.x = R.g ? Math.PI : 0; R.plane.position.y = p.y; this.style(); },
-  style() { R.wallM[0].opacity = R.g ? .12 : 1; R.wallM[1].opacity = R.g ? 1 : .12; },
+  place() { const p = eWorld(R.cell[0], R.cell[1], R.g); R.pawn.position.copy(p); R.pawn.rotation.x = R.g ? Math.PI : 0; R.plane.position.y = p.y; this.style(); this.markReach(); },
+  style() { R.wallM[0].opacity = R.g ? .06 : 1; R.wallM[1].opacity = R.g ? 1 : .06; R.deco.forEach((l, g) => l.forEach(m => m.visible = g === R.g)); },
+  markReach() { R.reach = new Set(ESCHER.G.filter(([x, y]) => !(x === R.cell[0] && y === R.cell[1]) && ePath(R.cell, [x, y], R.g)).map(([x, y]) => ek(x, y))); },
+  frame(t) { if (!R.plateTiles) return; R.plateTiles.forEach((list, g) => list.forEach(([x, y, m]) => { const live = g === R.g, hot = live && !R.walking && !S.won && (R.reach.has(ek(x, y)) || (x === R.cell[0] && y === R.cell[1])); m.material.emissiveIntensity = live ? (hot ? .6 + .5 * Math.sin(t * 5) : .25) : .05; })); },
   reset() { R.g = 0; R.cell = [...ESCHER.start]; R.walking = false; S.hist = []; S.moves = 0; this.place(); },
   openGate() { const e = eWorld(ESCHER.exit[0], ESCHER.exit[1], 0); const l = new THREE.PointLight('#fff2c0', 0, 12); l.position.set(e.x, 3, e.z); chamber.add(l); tween(1.6, u => { l.intensity = 3 * u; }); },
   clickables: () => [R.plane], onClick() {},
@@ -561,11 +564,12 @@ const ESC = {
     R.walking = true; let i = 0; const stepOnce = () => {
       const a = R.pawn.position.clone(), [x, y] = path[i], b = eWorld(x, y, R.g); tween(.2, u => { R.pawn.position.lerpVectors(a, b, u); R.pawn.position.y += .12 * Math.sin(u * Math.PI) * (R.g ? -1 : 1); }, () => {
         R.cell = [x, y]; i++; if (i < path.length) { stepOnce(); return; }
-        R.walking = false; if (isPlate(x, y)) this.flip(); else if (isExit(x, y)) { announce('Exit reached'); win(); } }); };
+        R.walking = false; this.markReach(); if (isPlate(x, y)) this.flip(); else if (isExit(x, y)) { announce('Exit reached'); win(); } }); };
     stepOnce();
   },
   flip() {
     R.walking = true; S.moves++; const g0 = R.g, g1 = 1 - g0, a = eWorld(R.cell[0], R.cell[1], g0), b = eWorld(R.cell[0], R.cell[1], g1); tone(110, 0, .55, 'sine', .12); tone(165, .15, .5, 'sine', .08);
+    R.deco.forEach(l => l.forEach(m => m.visible = true));
     tween(1.0, u => { R.pawn.position.lerpVectors(a, b, u); R.pawn.rotation.x = Math.PI * (g1 ? u : 1 - u); const o = ease(clamp01((u - .2) / .6)); R.wallM[0].opacity = lerp(g0 ? .12 : 1, g1 ? .12 : 1, o); R.wallM[1].opacity = lerp(g0 ? 1 : .12, g1 ? 1 : .12, o); },
       () => { R.g = g1; R.walking = false; this.place(); refreshHud(); announce(R.g ? 'Now in the ceiling world' : 'Now in the floor world'); hint(); }); refreshHud();
   },
@@ -632,7 +636,7 @@ renderer.setAnimationLoop(now => {
   const dt = Math.min(.05, (now - last) / 1000); last = now; runTweens(dt);
   if (!S.anim) { placeCamera(S.t); if (S.layer === 0) camera.position.x += mx * .5; }
   const tt = now / 1000; if (R.row && R.row.tiles) R.row.tiles.forEach(t => { if (t.userData.halo && t.userData.halo.visible) t.userData.halo.material.opacity = .35 + .25 * Math.sin(tt * 6); });
-  syncStems(); renderer.render(scene, camera);
+  if (S.room.frame) S.room.frame(tt); syncStems(); renderer.render(scene, camera);
 });
 const startId = ROOMS[location.hash.slice(1)] ? location.hash.slice(1) : 'miu';
 loadRoom(startId);
