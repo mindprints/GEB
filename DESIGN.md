@@ -51,16 +51,21 @@ Hofstadter's pq-system: axiom schema `x p - q x -` (x a run of hyphens) and one 
 - The lens (J) draws both plans side by side with plates, exit and your position. Same lesson again: each world is a dead end from inside, but the two plans together have a way through.
 - Not true non-Euclidean geometry (no portals, no genuine wall-relative gravity). That would need a real 3D engine.
 
-## Room 1 in three.js (first slice, `room1-3d.html`)
+## All four rooms in three.js (`3d.html`)
 
-Built after playing rooms 1 to 4 in the raycaster, which showed the concepts getting buried under navigation (walking between plates, tiny text in a corner, the insight living in a 2D overlay). This slice changes the interaction, not the puzzle:
+Built after playing the raycaster rooms, which showed the concepts getting buried under navigation (walking between plates, tiny text in a corner, the insight living in a 2D overlay). The 3D version keeps each puzzle and changes the interaction:
 
-- **Direct manipulation, no walking.** The string is a row of 3D tiles on a table; the four rules are buttons on the table (or keys 1 to 4). Tiles animate to show what each rule does (a U drops in for rule I, the tail is copied for rule II, three I tiles merge into a U for rule III). For rules III and IV with several possible places, the matching tiles glow and you click the ones you mean, which also removes the leftmost-only limitation of the 2D version.
-- **A true jump out of the system.** J pulls the camera up through the ceiling while the room folds flat; you end above a page of a book on a desk with the room drawn on it as a plan, an inkwell and quill beside it, and the axiom and rules written below.
-- **The lens as a physical object.** "Derive everything" grows three bars on the page: derivable strings by number of I's mod 3. Under `MI` the bar at remainder 0 is empty, with a wire frame saying where `MU` would live. Rewrite the axiom to `MIII` and every string piles into that bar instead.
-- The same proof gate as the 2D game guards the quill.
-- three.js is vendored as a single classic script (`vendor/three.min.js`, bundled from three r0.186 with esbuild, MIT licence alongside), so the page also works opened from disk.
-- Not yet done: rooms 2 to 4 in this style, a hub, touch controls, and any tuning on a real GPU (tested only with software rendering at about 4 fps, so animation feel is unjudged).
+- **One stage, four rooms.** A stone chamber with a table, set on a page of a book on a desk. Rooms are data (`MIU`, `PQ`, `BACH`, `ESC` in `3d.html`); tabs at the top switch between them and `#pq`, `#bach`, `#escher` open them directly.
+- **Direct manipulation, no walking.** Strings and tunes are rows of 3D tiles on the table; rules are buttons on the table (or keys 1 to 4). Tiles animate to show what a rule does. For rules with several possible places (III and IV in room 1) the matching tiles glow and you click the ones you mean. Clicks pressed during an animation are queued, not dropped.
+- **A true jump out of the system.** J pulls the camera up while the room folds flat into a plan on the page, with the inkwell and quill beside it. The panel and the 3D lens appear beside it and the view is shifted so the page content is centred in the space the panel leaves free (side panel on wide screens, bottom sheet on narrow ones).
+- **The lens as 3D objects on the page:**
+  - Room 1: bars of derivable strings by number of I's mod 3 (empty at remainder 0 under `MI`, everything piled there under `MIII`), and the same proof gate and quill as the 2D game.
+  - Room 2: beads for each hyphen run, with + and = and a true/false mark, for your stone and both doors.
+  - Room 3: a piano roll of the door's tune against yours, with the backwards and upside-down phrases named.
+  - Room 4: both plans side by side.
+- **Room 4 as a model.** The hall is a tray with two layers: floor-world walls stand on it, ceiling-world walls hang from a glass sheet above. The pawn walks one world at a time (click a square; it stops on gold plates, and clicking the plate you stand on flips again). The inactive world is drawn as a ghost.
+- three.js is vendored as a single classic script (`vendor/three.min.js`, three r0.186 bundled with esbuild, MIT licence alongside), so the page also works opened from disk. `room1-3d.html` redirects to `3d.html`.
+- **Not done:** touch tuning, tuning on a real GPU (tested only with software rendering at about 4 fps, so animation feel is unjudged), and any new puzzle content.
 
 ## Alternatives worth considering
 
